@@ -10,6 +10,8 @@ import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.udacity.stockhawk.R;
+
 
 public class StockProvider extends ContentProvider {
 
@@ -38,6 +40,7 @@ public class StockProvider extends ContentProvider {
     @Override
     public Cursor query(@NonNull Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         Cursor returnCursor;
+        Context context = getContext();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
         switch (uriMatcher.match(uri)) {
@@ -66,10 +69,10 @@ public class StockProvider extends ContentProvider {
 
                 break;
             default:
-                throw new UnsupportedOperationException("Unknown URI:" + uri);
+                throw new UnsupportedOperationException(context.getString(R.string.unknown_uri) + uri);
         }
 
-        Context context = getContext();
+
         if (context != null){
             returnCursor.setNotificationUri(context.getContentResolver(), uri);
         }
@@ -87,6 +90,7 @@ public class StockProvider extends ContentProvider {
     @Override
     public Uri insert(@NonNull Uri uri, ContentValues values) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
+        Context context = getContext();
         Uri returnUri;
 
         switch (uriMatcher.match(uri)) {
@@ -99,10 +103,10 @@ public class StockProvider extends ContentProvider {
                 returnUri = Contract.Quote.URI;
                 break;
             default:
-                throw new UnsupportedOperationException("Unknown URI:" + uri);
+                throw new UnsupportedOperationException(context.getString(R.string.unknown_uri) + uri);
         }
 
-        Context context = getContext();
+
         if (context != null){
             context.getContentResolver().notifyChange(uri, null);
         }
@@ -114,6 +118,7 @@ public class StockProvider extends ContentProvider {
     public int delete(@NonNull Uri uri, String selection, String[] selectionArgs) {
         final SQLiteDatabase db = dbHelper.getWritableDatabase();
         int rowsDeleted;
+        Context context = getContext();
 
         if (null == selection) {
             selection = "1";
@@ -137,11 +142,11 @@ public class StockProvider extends ContentProvider {
                 );
                 break;
             default:
-                throw new UnsupportedOperationException("Unknown URI:" + uri);
+                throw new UnsupportedOperationException(context.getString(R.string.unknown_uri) +  uri);
         }
 
         if (rowsDeleted != 0) {
-            Context context = getContext();
+
             if (context != null){
                 context.getContentResolver().notifyChange(uri, null);
             }

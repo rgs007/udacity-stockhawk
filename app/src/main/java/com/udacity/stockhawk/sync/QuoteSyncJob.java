@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
+import com.udacity.stockhawk.R;
 import com.udacity.stockhawk.data.Contract;
 import com.udacity.stockhawk.data.PrefUtils;
 
@@ -42,7 +43,7 @@ public final class QuoteSyncJob {
 
     static void getQuotes(Context context) {
 
-        Timber.d("Running sync job");
+        Timber.d(context.getString(R.string.running_sync_job));
 
         Calendar from = Calendar.getInstance();
         Calendar to = Calendar.getInstance();
@@ -114,12 +115,12 @@ public final class QuoteSyncJob {
             context.sendBroadcast(dataUpdatedIntent);
 
         } catch (IOException exception) {
-            Timber.e(exception, "Error fetching stock quotes");
+            Timber.e(exception, context.getString(R.string.error_fetching_stock_quotes));
         }
     }
 
     private static void schedulePeriodic(Context context) {
-        Timber.d("Scheduling a periodic task");
+        Timber.d(context.getString(R.string.scheduling_periodic_task));
 
 
         JobInfo.Builder builder = new JobInfo.Builder(PERIODIC_ID, new ComponentName(context, QuoteJobService.class));
