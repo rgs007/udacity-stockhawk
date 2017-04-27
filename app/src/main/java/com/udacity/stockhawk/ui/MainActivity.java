@@ -1,9 +1,11 @@
 package com.udacity.stockhawk.ui;
 
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
@@ -24,9 +26,13 @@ import com.udacity.stockhawk.data.Contract;
 import com.udacity.stockhawk.data.PrefUtils;
 import com.udacity.stockhawk.sync.QuoteSyncJob;
 
+import java.io.IOException;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import timber.log.Timber;
+import yahoofinance.Stock;
+import yahoofinance.YahooFinance;
 
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>,
         SwipeRefreshLayout.OnRefreshListener,
@@ -44,9 +50,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     TextView error;
     private StockAdapter adapter;
 
+
     @Override
     public void onClick(String symbol) {
-        Timber.d(getString(R.string.symbol_clicked), symbol);
+        Timber.d("Symbol clicked: %s", symbol);
+        Intent intent = new Intent(this, DetailActivity.class);
+        intent.putExtra(getString(R.string.extra_stock_key), symbol);
+        this.startActivity(intent);
     }
 
     @Override
@@ -119,16 +129,65 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     void addStock(String symbol) {
         if (symbol != null && !symbol.isEmpty()) {
 
-            if (networkUp()) {
-                swipeRefreshLayout.setRefreshing(true);
-            } else {
-                String message = getString(R.string.toast_stock_added_no_connectivity, symbol);
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-            }
-
-            PrefUtils.addStock(this, symbol);
-            QuoteSyncJob.syncImmediately(this);
+            new CheckStockTask().execute(symbol);
         }
+    }
+    /**
+     * Async Task to check if a new symbol exists before adding it to our system.
+     */
+    private class CheckStockTask extends AsyncTask<String, Void, Boolean> {
+        private String symbol;
+        private Stock stock;
+        private String error;
+
+//        @Override
+//        protected void onPreExecute() {
+//            super.onPreExecute();
+//        }
+
+        @Override
+        protected Boolean doInBackground(String... params) {
+            symbol = params[0];
+            Boolean exists;
+            try {
+                stock = YahooFinance.get(symbol);
+                // returns an stock even if doesn't exists
+                // name or an other value must be checked
+                exists = (stock != null && stock.getName() != null);
+            } catch (IOException | StringIndexOutOfBoundsException e) {
+                // StringIndexOutOfBoundsException if input is not in latin alphabet
+                error = e.getLocalizedMessage();
+                exists = null;
+            }
+            return exists;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean exists) {
+            if (error != null) {
+                showMessage(getString(R.string.error_io_error));
+                Timber.e(error);
+            } else {
+                if (exists) {
+                    if (networkUp()) {
+                        swipeRefreshLayout.setRefreshing(true);
+                    } else {
+                        String message = getString(R.string.toast_stock_added_no_connectivity, symbol);
+                        showMessage(message);
+                    }
+                    addCheckedStock(symbol);
+                } else {
+                    showMessage(getString(R.string.error_symbol_not_found, symbol));
+                }
+            }
+        }
+    }
+    private void showMessage(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+    private void addCheckedStock(String symbol) {
+        PrefUtils.addStock(this, symbol);
+        QuoteSyncJob.syncImmediately(this);
     }
 
     @Override
